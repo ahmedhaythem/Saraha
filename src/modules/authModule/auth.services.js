@@ -37,7 +37,7 @@ export const login = async(req,res)=>{
         return res.status(400).json({error:"email not confirmed"})
     }
 
-    const accessToken=jwt.sign({userId:user._id},process.env.accessToken,{expiresIn:"1h"});
+    const accessToken=jwt.sign({userId:user._id},process.env.accessToken,{expiresIn:"2h"});
     const refreshToken=jwt.sign({userId:user._id},process.env.refreshToken,{expiresIn:"7d"})
 
     res.json({message:"Login successful",accessToken:accessToken,refreshToken:refreshToken})

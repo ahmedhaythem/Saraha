@@ -5,7 +5,9 @@ import auth from "../../middleware/auth.middleware.js";
 const router = Router();
 
 
-router.post("/", auth, noteServices.createNote);
+router.post("/Send-Note", noteServices.createNote);
+router.get("/MyNotes", auth,noteServices.getNotes);
+router.delete("/Delete-Note/:id", auth,noteServices.deleteNote);
 
 
 
