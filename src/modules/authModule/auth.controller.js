@@ -9,6 +9,8 @@ router.post("/refresh-Token", authServices.refreshToken);
 router.post("/confirm-Email", authServices.confirmEmail);
 router.post("/forget-password", authServices.forgetPass);
 router.patch("/change-password", authServices.changePass);
+router.patch("/resend-email-code", authServices.resendCode);
+router.patch("/resend-password-code", authServices.resendCode);
 
 
 

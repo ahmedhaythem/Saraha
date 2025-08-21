@@ -16,10 +16,12 @@ const userSchema = new mongoose.Schema({
         default:false
     },
     emailOtp:{
-        type:String
+        otp:String,
+        expireIn:Date
     },
     passwordOtp:{
-        type:String
+        otp:String,
+        expireIn:Date
     },
     refreshToken: { type: String },
 }, { timestamps: true });

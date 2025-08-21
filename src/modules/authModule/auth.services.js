@@ -15,7 +15,17 @@ export const signup = async (req, res) => {
 
     const otp=createOtp()
     const hashedOtp = await hash(otp, 10);
-    const newUser = new User({ name, email, password, phone, age, emailOtp: hashedOtp });
+    const newUser = new User({
+        name, 
+        email, 
+        password, 
+        phone, 
+        age, 
+        emailOtp:{
+            otp:hashedOtp,
+            expireIn:Date.now()+ 2 * 60 * 1000
+    } 
+});
     await newUser.save();
 
     emailEmitter.emit('confirmEmail',{email:newUser.email,otp,userName:newUser.name})
@@ -74,7 +84,12 @@ export const confirmEmail=async (req,res) => {
         return res.status(404).json({error:"User not found"})
     }
 
-    const isMatch=await bcrypt.compare(otp,user.otp)
+    if(user.emailOtp.expireIn <= Date.now()){
+        return res.status(500).json({error:"otp expired...please reconfirm your email"})
+    }
+
+
+    const isMatch=await bcrypt.compare(otp,user.emailOtp.otp)
     if(!isMatch){
         return res.status(400).json({error:"Invalid OTP"})
     }
@@ -84,6 +99,33 @@ export const confirmEmail=async (req,res) => {
     await user.save()
     res.status(200).json({message:"Email verified successfully"})
 }
+
+
+export const resendCode=async (req,res) => {
+    const {email}=req.body
+    const user =await findOne(User,{email})
+
+    if (!user) {
+        return res.status(404).json({error:"User not found"})
+    }
+
+    let type="emailOtp"
+    let event="confirmEmail"
+    if(req.url.includes('password')){
+        type="passwordOtp"
+        event="sendPasswrodOTP"
+    }
+
+    const otp =createOtp()
+    const hashedOtp = await hash(otp, 10);
+    user[type].otp=hashedOtp
+    user[type].expireIn=Date.now() + 2 * 60 *1000
+    await user.save()
+    emailEmitter.emit(event,{email:user.email, otp, userName:user.name})
+    return res.status(200).json({message:"Done"})
+}
+
+
 
 export const forgetPass=async (req,res) => {
     const {email}=req.body
@@ -98,7 +140,11 @@ export const forgetPass=async (req,res) => {
     }
 
     const otp =createOtp()
-    user.passwordOtp=await hash(otp,10)
+    const hashedPasswordOtp=await hash(otp,10)
+    user.passwordOtp={
+        otp:hashedPasswordOtp,
+        expireIn:Date.now() + 2 * 60 * 1000
+    }
     await user.save()
 
     emailEmitter.emit('sendPasswrodOTP',{
@@ -109,6 +155,9 @@ export const forgetPass=async (req,res) => {
     res.status(200).json({message:"Done"})
 }
 
+
+
+
 export const changePass=async(req,res)=>{
     const {email,otp,newPassword}=req.body
     const user= await User.findOne({email})
@@ -116,7 +165,11 @@ export const changePass=async(req,res)=>{
         return res.status(404).json({error:"user not found"})
     }
 
-    const isMatch = await compare(otp, user.passwordOtp);
+    if(user.passwordOtp.expireIn <= Date.now()){
+        return res.status(500).json({error:"otp expired...please resend changed password otp"})
+    }
+
+    const isMatch = await compare(otp, user.passwordOtp.otp);
     if (!isMatch) {
     return res.status(400).json({ error: "Invalid OTP" });
     }

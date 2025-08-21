@@ -31,16 +31,36 @@ export const getAllUsers=async (req,res) => {
 }
 
 export const updateUser=async (req,res) => {
-    const {email}=res.body
-    const user=await User.findOne({email})
+    const userId=req.userId
+    const updates = req.body;
     
-    if(!user){
-        return res.status(404).json({error:"User not found"})
-    }
+    try{
+        if (updates.password) delete updates.password;
 
-    if(!user.confirmed){
-        return res.status(400).json({error:"email not confrimed"})
-    }
+        if (updates.email) {
+            const emailExists = await User.findOne({ email: updates.email, _id: { $ne: userId } });
+            if (emailExists) {
+                return res.status(400).json({ error: "Email already exists" });
+            }
+        }
 
-    
+        const user = await User.findByIdAndUpdate(
+            userId,
+            updates,
+            { new: true, runValidators: true }
+            ).select("-password");
+        
+        if(!user){
+            return res.status(404).json({error:"User not found"})
+        }
+
+        if(!user.confirmed){
+            return res.status(400).json({error:"email not confrimed"})
+        }
+
+        res.status(200).json({message:"User updated successfully"});
+        
+    }catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 }
