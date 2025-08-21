@@ -84,18 +84,40 @@ export const confirmEmail=async (req,res) => {
         return res.status(404).json({error:"User not found"})
     }
 
+
+    if (user.otpBanUntil && user.otpBanUntil > Date.now()) {
+        const remaining = Math.ceil((user.otpBanUntil - Date.now()) / 1000);
+    return res.status(403).json({
+        error: `Too many failed attempts. Try again in ${remaining} seconds.`,
+        });
+    }
+
     if(user.emailOtp.expireIn <= Date.now()){
         return res.status(500).json({error:"otp expired...please reconfirm your email"})
     }
 
 
     const isMatch=await bcrypt.compare(otp,user.emailOtp.otp)
-    if(!isMatch){
-        return res.status(400).json({error:"Invalid OTP"})
+    if (!isMatch) {
+        user.failedOtpAttempts += 1;
+
+        if (user.failedOtpAttempts >= 5) {
+        user.otpBanUntil = new Date(Date.now() + 5 * 60 * 1000);
+        await user.save();
+        return res.status(403).json({ error: "Too many failed attempts. Banned for 5 minutes." });
+        }
+
+        await user.save();
+        return res.status(400).json({ error: "Invalid OTP" });
     }
 
-    user.otp = undefined;
+
+    
+
+    user.emailOtp = undefined;
     user.confirmed=true
+    user.failedOtpAttempts = 0;
+    user.otpBanUntil = null;
     await user.save()
     res.status(200).json({message:"Email verified successfully"})
 }
@@ -109,6 +131,14 @@ export const resendCode=async (req,res) => {
         return res.status(404).json({error:"User not found"})
     }
 
+    if (user.otpBanUntil && user.otpBanUntil > Date.now()) {
+        const remaining = Math.ceil((user.otpBanUntil - Date.now()) / 1000);
+        return res.status(403).json({ 
+        error: `You are temporarily banned. Try again in ${remaining} seconds.` 
+        });
+    }
+
+
     let type="emailOtp"
     let event="confirmEmail"
     if(req.url.includes('password')){
@@ -120,6 +150,8 @@ export const resendCode=async (req,res) => {
     const hashedOtp = await hash(otp, 10);
     user[type].otp=hashedOtp
     user[type].expireIn=Date.now() + 2 * 60 *1000
+    user.failedOtpAttempts = 0;
+    user.otpBanUntil = undefined;
     await user.save()
     emailEmitter.emit(event,{email:user.email, otp, userName:user.name})
     return res.status(200).json({message:"Done"})

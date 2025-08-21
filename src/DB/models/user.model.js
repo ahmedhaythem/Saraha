@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema({
         expireIn:Date
     },
     refreshToken: { type: String },
+    failedOtpAttempts: { type: Number, default: 0 },
+    otpBanUntil: { type: Date, default: null },
 }, { timestamps: true });
 
 userSchema.pre("save", async function () {
