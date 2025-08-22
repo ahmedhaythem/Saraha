@@ -7,6 +7,10 @@ import { template } from "../../utils/sendEmail/generatedHTML.js";
 import { sendEmail } from "../../utils/sendEmail/sendEmail.js";
 import { createOtp, emailEmitter } from "../../utils/sendEmail/emailEvents.js";
 
+
+
+
+
 export const signup = async (req, res) => {
     const { name, email, password, phone, age } = req.body;
 
@@ -31,6 +35,7 @@ export const signup = async (req, res) => {
     emailEmitter.emit('confirmEmail',{email:newUser.email,otp,userName:newUser.name})
     res.status(201).json({ message: "User created" });
 };
+
 
 export const login = async(req,res)=>{
     const{email,password}=req.body
