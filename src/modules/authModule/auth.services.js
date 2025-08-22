@@ -2,10 +2,11 @@ import User from "../../DB/models/user.model.js";
 import { findOne ,findById } from "../../DB/DBServices.js";
 import bcrypt, { compare, hash } from "bcrypt";
 import jwt from "jsonwebtoken";
-import {customAlphabet } from "nanoid";
+import {customAlphabet, nanoid } from "nanoid";
 import { template } from "../../utils/sendEmail/generatedHTML.js";
 import { sendEmail } from "../../utils/sendEmail/sendEmail.js";
 import { createOtp, emailEmitter } from "../../utils/sendEmail/emailEvents.js";
+import { revokeTokenModel } from "../../DB/models/revokeToken.model.js";
 
 
 
@@ -52,8 +53,10 @@ export const login = async(req,res)=>{
         return res.status(400).json({error:"email not confirmed"})
     }
 
-    const accessToken=jwt.sign({userId:user._id},process.env.accessToken,{expiresIn:"2h"});
-    const refreshToken=jwt.sign({userId:user._id},process.env.refreshToken,{expiresIn:"7d"})
+    const jwtid=nanoid()
+
+    const accessToken=jwt.sign({userId:user._id},process.env.accessToken,{expiresIn:"2h",jwtid});
+    const refreshToken=jwt.sign({userId:user._id},process.env.refreshToken,{expiresIn:"7d",jwtid})
 
     res.json({message:"Login successful",accessToken:accessToken,refreshToken:refreshToken})
 }
@@ -219,4 +222,28 @@ export const changePass=async(req,res)=>{
     })
 
     res.status(202).json({message:"Done"})
+}
+
+
+
+export const logout=async (req,res) => {
+    const tokenData=req.decoded
+    const userId=req.userId
+    console.log({tokenData});
+    
+    await revokeTokenModel.create({
+        userId:userId,
+        jti:tokenData.jti,
+        expireIn:tokenData.iat + 7 * 24 *60 *60
+    })
+
+    return res.status(200).json({message:"done"})
+}
+
+
+export const logoutFromAllDevices=async (req,res)=>{
+    const user=req.user
+    user.changedCredentialsAt=Date.now()
+    await user.save()
+    return res.status(200).json({message:"done"})
 }

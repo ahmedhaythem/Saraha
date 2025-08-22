@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
     refreshToken: { type: String },
     failedOtpAttempts: { type: Number, default: 0 },
     otpBanUntil: { type: Date, default: null },
+    changedCredentialsAt:{type:Date}
 }, { timestamps: true });
 
 userSchema.pre("save", async function () {

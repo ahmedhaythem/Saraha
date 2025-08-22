@@ -19,6 +19,9 @@ router.patch("/change-password", authServices.changePass);
 router.patch("/resend-email-code", authServices.resendCode);
 router.patch("/resend-password-code", authServices.resendCode);
 
+router.post("/logout", auth,authServices.logout);
+router.post("/logout-from-all-devices", auth,authServices.logoutFromAllDevices);
+
 
 
 
